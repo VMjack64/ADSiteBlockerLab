@@ -2,17 +2,17 @@
 ## Goal
 For this quick lab, my goal is to utilize AD to block access to distracting sites such as YouTube, Reddit, Facebook, etc... across the entire domain.
 ## Preparations
-* The AD lab is based on the one from TCM Academy's free Practical Help Desk course, which I finished beforehand
-	* Domain controller (DC) and Windows 11 virtual machine (VM) are in the same domain
-	* Verified that the Windows 11 VM doesn't have an alternate DNS server set
-	* Ensured that the DC and VM only have one adapter connected to the internet (NAT network adapter)
-* Did lots of research on ways I could achieve this goal. These are the methods I tried:
+- The AD lab is based on the one from TCM Academy's free Practical Help Desk course, which I finished beforehand
+	- Domain controller (DC) and Windows 11 virtual machine (VM) are in the same domain
+	- Verified that the Windows 11 VM doesn't have an alternate DNS server set
+	- Ensured that the DC and VM only have one adapter connected to the internet (NAT network adapter)
+- Did lots of research on ways I could achieve this goal. These are the methods I tried:
 ## First method: Modifying AD DNS
-1. In domain controller, navigate to Tools > DNS:
-![c59779b28e7d8015e0ae1f0073771982.png](:/f963b33f05174b75ae91734b8bee2cce)
-2. Right-click on Forward Lookup Zones, then select New Zone...
-3. Click Next up to "Zone Name". Here, enter the domain to be blocked (w/o `www.`):
+1. In the DC, on Server Manager, navigate to Tools > DNS:
+2. Right-click on **Forward Lookup Zones**, then select **New Zone...**
+3. Click Next up to **Zone Name**. Here, enter the domain to be blocked (w/o `www.`):
 ![87fb28e8536286a3eeb759ae25056f37.png](:/1753f70aa5ed4566ac8ed1f88be9afb9)
+
 4. Under "Dynamic Update", select Do not allow dynamic updates, then proceed with creating the zone
 5. Double-click on the newly created zone, then right-click in the white area and select New Host (A or AAAA)...
 6. Under IP address, enter `0.0.0.0` (all IPs) or `127.0.0.1` (localhost address), check Create associated pointer (PTR) record, then click Add Host:
