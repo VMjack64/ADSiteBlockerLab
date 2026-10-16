@@ -2,12 +2,12 @@
 ## Goal
 For this quick lab, my goal is to utilize AD to block access to distracting sites such as YouTube, Reddit, Facebook, etc... across the entire domain.
 ## Preparations
-Video help: https://www.youtube.com/watch?v=auc8rTWFxGw
 * The AD lab is based on the one from TCM Academy's free Practical Help Desk course, which I finished beforehand
-* Make sure DC and Windows 11 VM are in the same domain (done already)
-* Make sure Win 11 VM doesn't have an alternate DNS server set (verified)
-* Make sure all target machines only have one adapter connected to the internet
-## Setup
+	* Domain controller (DC) and Windows 11 virtual machine (VM) are in the same domain
+	* Verified that the Windows 11 VM doesn't have an alternate DNS server set
+	* Ensured that the DC and VM only have one adapter connected to the internet (NAT network adapter)
+* Did lots of research on ways I could achieve this goal. These are the methods I tried:
+## First method: Modifying AD DNS
 1. In domain controller, navigate to Tools > DNS:
 ![c59779b28e7d8015e0ae1f0073771982.png](:/f963b33f05174b75ae91734b8bee2cce)
 2. Right-click on Forward Lookup Zones, then select New Zone...
