@@ -174,7 +174,7 @@ While I'm at it, I also took care of the "Your connection isn't private" screen 
 
 - Under **Admin console and end-user interaction**, I left **Use the IP address of the first internal interface** checked
 
-From there, I was able to use the `tar -xvzf` command in PowerShell to extract the tar.gz zip file in Windows. I then pushed the default certificate throughout the domain via the same GPO used for the blocked sites and ran `gpupdate`. Even with the slight deviations from the instructions, the untrusted certificate error no longer appeared when accessing the Sophos portals, thereby accomplishing my goal for this lab
+From there, I was able to use the `tar -xvzf` command in PowerShell to extract the tar.gz zip file in Windows. I then pushed the default certificate throughout the domain via the same GPO used for the blocked sites and ran `gpupdate`. Even with the slight deviations from the instructions, the untrusted certificate error no longer appeared when accessing the Sophos portals, thereby accomplishing my goal for this lab.
 
 ## Helpful resources
 - [YouTube: VirtualBox installation guide](https://www.youtube.com/watch?v=wQSWsFm1DHc)
