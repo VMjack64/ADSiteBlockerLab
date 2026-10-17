@@ -95,7 +95,7 @@ In order to get a custom block message up and running, I needed to use some thir
 	![](/screenshots/16.png)
 
 8. Repeat step 7 for additional AD users to be added
-### Creating Block Rule
+### Creating block rule
 1. Create the following custom category:
 
 	![](/screenshots/17.png)
@@ -149,27 +149,36 @@ In order to get a custom block message up and running, I needed to use some thir
 
 		- I also tried the same DC to Windows 11 internet access test from earlier, and I still get blocked, as expected
 		- Additionally, I tried switching accounts on the captive portal with the YouTube session still up, and the web policy changes between accounts were able to take effect as well
-#### However, I'd like to put in one final touch - a custom block page to show to restricted users
-1. According to various sources I found on the internet about Sophos custom block pages, you enable them in the admin portal under Web > User notifications > Message for block action > Use custom block message
-2. Even after enabling it, the "Your connection isn't private" screen kept coming up when accessing the blocked site. According to the error code (same as before) and the sources, the solution to stop this page from showing is to push the appropriate certificate to the machine, located under Web > General settings > HTTPS decryption and scanning:
-![967532754cc37255cffab06de0f2c319.png](:/9d96953f6a254b11bb9d295a8f15b878)
-3. With the certificate downloaded onto the DC, open up Server Manager to Group Policy Management and create a new GPO on the domain that will house the certificate:
-![e9430754d183f58a4bf4774d22e7a222.png](:/a78ae0ae93d041caa1aad3dd86924841)
-4. I followed \<this guide\> word-by-word after step 2 to successfully import the certificate file into the GPO (NOTE: Since my certificate file came in a `.pem`, I change the file type to all files in the file selection screen to select it)
-5. After running `gpupdate /force` on all machines in the domain, I tested things on Windows 11 VM. The page finally shows, completing my task:
-![2af11da6e80219b7bb901828e578fa13.png](:/24530611e71f40569023abd81902988a)
-- And for convenience, I also decided to take care of the other "Your connection isn't private" screen that comes when trying to browse unauthenticating by following \<this guide\>, but with a few slight modifications:
-	- Under Subject Alternative Names, I entered in the IP address of the firewall under IP addresses
-	  ![2ee394f96f251e79bd210d4e22f72914.png](:/1597ba93eba14ed9989774e9f0d1932d)
-	  ![8ec4d6eaa04d76b689395666655d7041.png](:/e3766beaccb64641b13dddae6f38ea64)
-	- Under Admin console and end-user interaction, I left Use the IP address of the first internal interface checked
-	- I was able to use the `tar -xvzf` command in PowerShell to unzip the tar.gz file in Windows
-	- I then pushed the certificate via the same GPO used for the blocked sites and ran the `gpupdate` command on all machines in the domain
-	- Even with the changes, the untrusted certificate error no longer appears when accessing the Sophos portals, thereby completing my job here for good
+- Despite the fixes however, no custom block page is being shown in the previous screenshot
+#### Getting the custom block page up
+1. Enable the page in the admin portal under **Web > User notifications > Message for block action > Use custom block message**
+2. Even after enabling it, the "Your connection isn't private" screen kept coming up when accessing the blocked site. Based on the error code, I needed to push the appropriate certificate to the machine's list of trusted certificates. I was able to find the certificate I'm looking for under **Web > General settings > HTTPS decryption and scanning** in the admin portal:
+
+	![](/screenshots/33.png)
+
+3. With the certificate downloaded onto the DC, open up Server Manager, navigate to **Tools > Group Policy Management**, and create a new GPO on the domain that will house the certificate:
+
+	![](/screenshots/34.png)
+
+4. I followed the Microsoft guide on distributing certificates via GPOs from step 3 onwards to successfully import the certificate into the GPO
+	- Since my certificate came in a `.pem` file, I changed the file type in the select file screen to `All files` so I can select it
+5. After running `gpupdate /force` on all machines in the domain, I tested things on Windows 11. The page finally shows:
+
+	![](/screenshots/35.png)
+
+While I'm at it, I also took care of the "Your connection isn't private" screen for the Sophos web portals by following the Sophos documentation on removing untrusted certificate errors, albeit with a few modifications:
+- Under **Subject Alternative Names**, I entered in the LAN IP address of the firewall under **IP addresses**
+
+	![](/screenshots/36.png)
+	![](/screenshots/37.png)
+
+- Under **Admin console and end-user interaction**, I left **Use the IP address of the first internal interface** checked
+
+From there, I was able to use the `tar -xvzf` command in PowerShell to extract the tar.gz zip file in Windows. I then pushed the default certificate throughout the domain via the same GPO used for the blocked sites and ran `gpupdate`. Even with the slight deviations from the instructions, the untrusted certificate error no longer appeared when accessing the Sophos portals, thereby accomplishing my goal for this lab
 
 ## Helpful resources
-- https://www.youtube.com/watch?v=wQSWsFm1DHc (VirtualBox installation guide)
-- https://techvids.sophos.com/watch/1ixxoYCGZ6dV3qzfHbZ7rN (Integrating AD with Sophos)
-- https://support.sophos.com/support/s/article/KBA-000004747?language=en_US#Blocking-YouTube-with-a-policy (creating the site block rule)
-- https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/deployment/distribute-certificates-to-client-computers-by-using-group-policy (certificate distribution across machines in domain via GPOs)
-- https://docs.sophos.com/nsg/sophos-firewall/22.0/Help/en-us/webhelp/onlinehelp/AdministratorHelp/Certificates/HowToArticles/CertificatesRemoveUntrustedCertificateError/index.html#edit-the-admin-and-user-settings (removing untrusted certificate error for Sophos portals)
+- [YouTube: VirtualBox installation guide](https://www.youtube.com/watch?v=wQSWsFm1DHc)
+- [Sophos techvid: Integrating AD with Sophos](https://techvids.sophos.com/watch/1ixxoYCGZ6dV3qzfHbZ7rN)
+- [Sophos Support: Creating the site block rule](https://support.sophos.com/support/s/article/KBA-000004747?language=en_US#Blocking-YouTube-with-a-policy)
+- [Microsoft Learn: Certificate distribution across machines in domain via GPOs](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/deployment/distribute-certificates-to-client-computers-by-using-group-policy)
+- [Sophos Docs: Removing untrusted certificate error for Sophos portals](https://docs.sophos.com/nsg/sophos-firewall/22.0/Help/en-us/webhelp/onlinehelp/AdministratorHelp/Certificates/HowToArticles/CertificatesRemoveUntrustedCertificateError/index.html#edit-the-admin-and-user-settings)
