@@ -2,7 +2,7 @@
 ## Goal
 For this quick lab, my goal is to utilize AD to block access to distracting sites such as YouTube, Reddit, Facebook, etc... across the entire domain.
 ## Preparations
-- The AD lab is based on the one from TCM Academy's free Practical Help Desk course, which I finished beforehand
+- The AD lab is based on the one from [TCM Academy's free Practical Help Desk](https://tcm-sec.com/academy/practical-help-desk/) course, which I finished beforehand
 	- VirtualBox is the hypervisor used for launching the VMs
  	- Domain controller (DC) and Windows 11 virtual machine (VM) are in the same domain
 	- Verified that the Windows 11 VM doesn't have an alternate DNS server set
