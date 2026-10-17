@@ -136,21 +136,19 @@ In order to get a custom block message up and running, I needed to use some thir
 	![](/screenshots/29.png)
 
 - In Windows 11, I also changed its Ethernet adapter settings, changing the gateway to the firewall's IP address, but keeping the DC as the primary DNS server
-	- With this setup, Windows 11 could only access the internet if it and the DC In the DC, I signed in the portal with an account that can access YouTube, while in Windows 11 I signed in with an account who's restricted. After accessing YouTube in the DC, I tried the same in Windows 11, and actually still got restricted
-		- Theoretically speaking, it works this way since the Windows 11 DNS server still points to the DC's IP address, who's DNS server in turn points to the Firewall, meaning the Windows 11 VM queries the DC, which then queries the Firewall, and the wall performs the policy checks as established
-		- As a result, I modified the Windows 11 adapter settings one final time, this time making the Firewall the primary DNS server (in order to establish individual internet access), with the DC acting as the secondary DNS server
-			- This setup resulted in the previous wallpaper policy for Engineering OU failing to load, so I swapped the DNS servers around in the Windows 11 adapter settings to get it up:
+	- A test that I tried: In the DC, I signed into the portal with an account that can access YouTube, and in Windows 11 with an account who's restricted from accessing it. After accessing YouTube in the DC, I tried the same in Windows 11, and actually got blocked as I was expecting
+	- With this setup though, Windows 11 can only access the internet if both it and the DC are signed into the firewall's captive portal (on `https://<Firewall LAN IP address>:8090`)
+		- As a result, I modified the Windows 11 adapter settings again, this time making the firewall the primary DNS server with the DC acting as the secondary DNS server so that Windows 11 doesn't have to depend on the DC being logged in for internet access. However, this resulted in the wallpaper group policy object (GPO) for the Engineering OU not being able to load, so I swapped the DNS servers around to get everything fixed:
 
-				![](/screenshots/30.png)
+			![](/screenshots/30.png)
 
-	- Afterwards, logging into both machines/attempting to browse the internet should automatically pop up a browser window for each, telling the user to sign in via the Firewall's captive portal (port 8090) to access the internet. With these fixes, each machine on the domain can access the internet after logging into the captive portal, all while the domain users can still get GPOs from the DC
-	- Now, accessing YouTube while logged in as Haruka lets me, while accessing as Yayoi blocks me:
+	- Now, when attempting to browse the internet in both machines, a browser window automatically popped up for each, telling the user to sign in to the captive portal to access the internet. Accessing YouTube while logged in as someone in the Management OU allows me, while accessing as someone in the Engineering OU blocks me:
 
 		![](/screenshots/31.png)
 		![](/screenshots/32.png)
 
-		- Additionally, after signing into an account with access to YouTube on the DC, I proceed to sign in with an account restricted from accessing YouTube on the Windows 11 machine. Then, when trying to access YouTube there, I still get blocked
-		- Changing accounts also echoes the changes even when you don't close the window, though depending on the firewall specs, it'll take some time
+		- I also tried the same DC to Windows 11 internet access test from earlier, and I still get blocked, as expected
+		- Additionally, I tried switching accounts on the captive portal with the YouTube session still up, and the web policy changes between accounts were able to take effect as well
 #### However, I'd like to put in one final touch - a custom block page to show to restricted users
 1. According to various sources I found on the internet about Sophos custom block pages, you enable them in the admin portal under Web > User notifications > Message for block action > Use custom block message
 2. Even after enabling it, the "Your connection isn't private" screen kept coming up when accessing the blocked site. According to the error code (same as before) and the sources, the solution to stop this page from showing is to push the appropriate certificate to the machine, located under Web > General settings > HTTPS decryption and scanning:
