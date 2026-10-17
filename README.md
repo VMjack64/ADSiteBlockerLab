@@ -3,72 +3,81 @@
 For this quick lab, my goal is to utilize AD to block access to distracting sites such as YouTube, Reddit, Facebook, etc... across the entire domain.
 ## Preparations
 - The AD lab is based on the one from TCM Academy's free Practical Help Desk course, which I finished beforehand
-	- Domain controller (DC) and Windows 11 virtual machine (VM) are in the same domain
+	- VirtualBox is the hypervisor used for launching the VMs
+ 	- Domain controller (DC) and Windows 11 virtual machine (VM) are in the same domain
 	- Verified that the Windows 11 VM doesn't have an alternate DNS server set
 	- Ensured that the DC and VM only have one adapter connected to the internet (NAT network adapter)
 - Did lots of research on ways I could achieve this goal. These are the methods I tried:
 ## First method: Modifying AD DNS
-1. In the DC, on Server Manager, navigate to Tools > DNS:
+1. In the DC, on Server Manager, navigate to **Tools > DNS**:
 2. Right-click on **Forward Lookup Zones**, then select **New Zone...**
-3. Click Next up to **Zone Name**. Here, enter the domain to be blocked (w/o `www.`):
-![87fb28e8536286a3eeb759ae25056f37.png](:/1753f70aa5ed4566ac8ed1f88be9afb9)
+3. Click Next up to **Zone Name**. Here, enter the domain to be blocked (without `www.`):
 
-4. Under "Dynamic Update", select Do not allow dynamic updates, then proceed with creating the zone
-5. Double-click on the newly created zone, then right-click in the white area and select New Host (A or AAAA)...
-6. Under IP address, enter `0.0.0.0` (all IPs) or `127.0.0.1` (localhost address), check Create associated pointer (PTR) record, then click Add Host:
-![97c57bbbb9f3ddb58fc2f2efeff59699.png](:/bc117d9d1f7d4fb88d894630f4a9571e)
-7. Click Done, and now you should see the host:
-![2f1a2b910be2a1c0d8559ebd36a55455.png](:/2c3278d2855b4526a83705c9e91cf75a)
-8. Repeat steps 2-7 for as many domains you want to block
-9. Open an admin command prompt and run `gpupdate /force` across all machines on the domain to apply the policy changes, as well as `ipconfig /flushdns` to reset previously stored DNS caches
-	* Additionally, clear browser caches and/or close then reopen browser
-10. Verify you can't access the blocked domains:
-![1ad06a0bb0c3d4f08c3dadea95b78911.png](:/57ebdfb5ccbe40488dafa46d30a63401)
-![4ff2fdbd8984412aa7571e79d3010226.png](:/74dbb4a3f85c496faf4dd5de87470224)
-## However... Instead of this, I'd like a blocked page to show up indicating the site in question is blocked in the domain
-* Will need to use some third-party web filtering software to pull this off (Sophos Firewall, Admin by Request). However, this necessitates (or at the very least, strongly recommended), a dedicated VM to install the software in, then have it connect to the domain controller
-	* I will be using Sophos Firewall
-		* Helpful resources:
-			* https://www.youtube.com/watch?v=B-ZFj_Bn_-I (where to find installers for VirtualBox + installation guide)
-			* https://www.youtube.com/watch?v=wQSWsFm1DHc (VirtualBox installation guide)
-			* https://www.youtube.com/watch?v=xIHNoeOEPbM (for telling me exactly where I needed to go to use the AD credentials to add AD user to firewall)
-			* https://support.sophos.com/support/s/article/KBA-000004747?language=en_US#Blocking-YouTube-with-a-policy (creating the site block rule)
-			* https://community.sophos.com/sophos-xg-firewall/f/discussions/148136/sophos-firewall-blocking-page/549319 & https://community.sophos.com/sophos-xg-firewall/f/discussions/132083/nu-custom-message-for-malware-blocked-pages (Enabling custom block pages & removing "Your connection isn't private" screen)
-			* https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/deployment/distribute-certificates-to-client-computers-by-using-group-policy (certificate distribution across machines in domain via GPOs)
-			* https://docs.sophos.com/nsg/sophos-firewall/22.0/Help/en-us/webhelp/onlinehelp/AdministratorHelp/Certificates/HowToArticles/CertificatesRemoveUntrustedCertificateError/index.html#edit-the-admin-and-user-settings (removing untrusted certificate error for Sophos portals)
+	![](/screenshots/1.png)
+
+4. Under **Dynamic Update**, select **Do not allow dynamic updates**, then proceed with creating the zone
+5. Double-click on the zone, then right-click in the white area and select **New Host (A or AAAA)...**
+6. Under **IP address**, enter `0.0.0.0` (all IPs) or `127.0.0.1` (localhost address), check **Create associated pointer (PTR) record**, then click **Add Host**:
+7. Click **Done**. The new host record should now appear:
+
+	![](/screenshots/2.png)
+
+8. Repeat steps 2-7 for as many domains to be blocked
+9. Open a command prompt as administrator and run `gpupdate /force` across all machines on the domain to apply the policy changes, as well as `ipconfig /flushdns` to reset previously stored DNS caches
+
+I then tested things by attempting to access YouTube on the DC. Sure enough, I wasn't able to:
+
+![](/screenshots/3.png)
+
+Same with the VM:
+
+![](/screenshots/4.png)
+
+While I could've stopped there, I wanted to go further and try to display a custom block page to domain users should they try to access the blocked pages.
+## Second method: Integrating with Sophos Firewall
+In order to get a custom block message up and running, I needed to use some third-party web filtering software (Sophos Firewall, Admin by Request) and have it connect to the Active Directory domain controller. Ultimately, I decided on Sophos Firewall for this. According to the installation guides, I needed to set this up in a separate VM with at least 4GB of RAM. After signing up for the [Free Home Edition](https://www.sophos.com/en-us/free-tools/sophos-xg-firewall-home-edition) and then failing to install the ISO file myself, I hunted down a preconfigured setup of Sophos for VirtualBox [here](https://www.sophos.com/en-us/support/downloads/firewall-installers) (under the VMWare virtual installer for Sophos Firewall OS).
+
 ### Setting up Sophos
-1. Following video 1 to grab the installer, I then follow video 2 to set it up in VirtualBox
-2. Select `Network configuration menu`, then choose `Yes` to `Set IPv4 Address`. For PortA (LAN network/AD network), change the address to be within the AD network's subnet mask:
-![9c06d5fb3ced09882182bd21e19d5f91.png](:/13ac6002e0234bd6a1eaea6bf5270b1f)
-3. WAN should be different from above. If so, leave as is and navigate to a VM situated in the same AD network and enter the Sophos Firewall's new IP address into a browser:
-![1fc039e2603fa1ee64e416cd722281a0.png](:/7773bc0de7954b8f87ac6566c9d142f3)
-![d15be765a6139c7019e03bd27a5a6a26.png](:/a348f532e3584622b8f12d7e39724137)
-4. Go through the setup process:
-	* Password: WorDPASS1!
-	* Leave Install latest firmware checked
-	* Master key: MASTERpassword#1
-	* For serial number, register for Sophos Home Firewall to get one. Then, enter it under Serial Number
-	* Make sure to de-check `Enable DHCP`, and choose `This firewall` as the gateway
-	* As I'm running this firewall for the sole purpose of blocking distracting sites for productivity, I'll leave everything under the `Network protection` section unchecked
-	* Under `Notifications and Backups`, feel free to enter your actual email or dummy email(s). Uncheck `Send backups every week`
-5. After setup, I ran into a `Refused to connect` page, so I re-entered the exact URL from step 3. Then, I was able to sign-in:
-	* Username: admin
-	* Password: WorDPASS1!
-![60d303c4069eb975ee42a3aab7a1aa54.png](:/434c2083aa3545c4adc265d43e77e592)
+1. I first modified the network settings in VirtualBox Manager for my Sophos VM to have adapter #1 use the `ADNetwork` NAT network that I set up during the Practical Help Desk course. Additionally, I made sure that my DC and Windows 11 VMs only have the NAT network adapter active for networking.
+2. Launching the Sophos VM for the first time, I entered the password `admin` to begin the setup process
+3. Under `Network configuration menu`, I chose `Yes` to `Set IPv4 Address`. For `PortA` (local area network (LAN)), modify the IP address to be within `ADNetwork`'s subnet mask (in my case, `10.5.5.0/24`):
+
+	![](/screenshots/5.png)
+
+4. Leave `PortB` (wide area network (WAN)) as is. Launch the DC and Windows 11 VMs, then in either one, enter `https://<the new LAN IP address from step 3>:4444` into a browser:
+
+	![](/screenshots/6.png)
+	![](/screenshots/7.png)
+
+5. Go through the setup process:
+	- Leave **Install latest firmware** checked
+	- For **Serial Number**, use the one sent to your email from registering for Sophos Home
+	- De-check **Enable DHCP**, and choose **This firewall** as the gateway
+	- Since I'm running this firewall for the sole purpose of blocking distracting sites, leave everything under the **Network protection** section unchecked
+	- Under **Notifications and Backups**, feel free to enter your actual or dummy email(s). Uncheck **Send backups every week**
+6. After going through the setup process, I ran into a "Refused to connect" page, so I re-entered the URL from step 4. From there, I was able to sign-in to the admin portal:
+	- Username: `admin`
+	- Password: `<the one entered in the setup process throughout step 5>`
+	
+	![](/screenshots/8.png)
 ### Integrating AD with Sophos
-* Help: https://techvids.sophos.com/watch/1ixxoYCGZ6dV3qzfHbZ7rN
-* First, creating a new OU and User for Sophos integration:
-![f3777144d67b3a3931bd8add6fae5b45.png](:/46004c6932ab4f9080c609441fc82b32)
-	* Password: WorDPASS!!!
-	* By default, this new user can read AD group membership of itself + other domain users:
-	  ![d73fa6c4e1cefa39179dbe7f22457c34.png](:/f37448d6f20a42d5855117cb59a837ed)
-1. On the Sophos Firewall GUI, navigate to Authentication > Servers and input the following settings:
-![0be6d40978d31d9f3d75499a51aaf8fc.png](:/eb2df29955c241e6828514ec0027dc96)
-	* For our personal purposes, uncheck Validate server certificate (in an enterprise setting though, leave it checked)
-	* Search query: Searches the domain itself for all groups and OUs in it
-2. Click Test connection and make sure connection is successful before clicking Save
-3. Next to the Active Directory server, click the Import icon
-4. Under Select AD groups to import, select the three OUs created throughout the lab (Engineering, Management, IT)
+- First, creating a new organizational unit (OU) and domain user for Sophos integration:
+
+	![](/screenshots/9.png)
+
+	- By default, this new user can read AD group membership of itself and other domain users:
+
+		![](/screenshots/10.png)
+
+1. On the Sophos Firewall admin portal, navigate to **Authentication > Servers** and **Add** a server with the following settings:
+
+	![](/screenshots/11.png)
+
+	- For personal purposes, I unchecked **Validate server certificate**
+	- To describe the search query written here, the query searches the domain itself for all groups and OUs in it
+2. Click **Test connection** and make sure connection is successful before clicking **Save**
+3. Next to the AD server, click the import icon
+4. Under **Select AD groups to import**, I selected the three OUs created throughout the Help Desk course (Engineering, Management, IT)
 5. Final selections:
 ![6bc4415a391c178d845e236773d8e326.png](:/ec4cc0d910574f0e923284d3a8b5add5)
 6. Setting primary authentication method to Active Directory:
@@ -141,3 +150,12 @@ Back on the admin portal, we finally see Chihaya pop up:
 	* I was able to use the `tar -xvzf` command in PowerShell to unzip the tar.gz file in Windows
 	* I then pushed the certificate via the same GPO used for the blocked sites and ran the `gpupdate` command on all machines in the domain
 	* Even with the changes, the untrusted certificate error no longer appears when accessing the Sophos portals, thereby completing my job here for good
+
+## Helpful resources
+- https://www.youtube.com/watch?v=wQSWsFm1DHc (VirtualBox installation guide)
+- https://techvids.sophos.com/watch/1ixxoYCGZ6dV3qzfHbZ7rN (Integrating AD with Sophos)
+- https://www.youtube.com/watch?v=xIHNoeOEPbM (for telling me exactly where I needed to go to use the AD credentials to add AD user to firewall)
+- https://support.sophos.com/support/s/article/KBA-000004747?language=en_US#Blocking-YouTube-with-a-policy (creating the site block rule)
+- https://community.sophos.com/sophos-xg-firewall/f/discussions/148136/sophos-firewall-blocking-page/549319 & https://community.sophos.com/sophos-xg-firewall/f/discussions/132083/nu-custom-message-for-malware-blocked-pages (Enabling custom block pages & removing "Your connection isn't private" screen)
+- https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/deployment/distribute-certificates-to-client-computers-by-using-group-policy (certificate distribution across machines in domain via GPOs)
+- https://docs.sophos.com/nsg/sophos-firewall/22.0/Help/en-us/webhelp/onlinehelp/AdministratorHelp/Certificates/HowToArticles/CertificatesRemoveUntrustedCertificateError/index.html#edit-the-admin-and-user-settings (removing untrusted certificate error for Sophos portals)
